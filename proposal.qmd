@@ -1,0 +1,6 @@
+---
+title: "EDS 222 Final Project Proposal"
+subtitle: "Final Project Checkpoint #2"
+author: "Courtney Lorey"
+date: 2026-10-22
+---

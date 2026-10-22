@@ -1,7 +1,7 @@
 ---
 title: EDS 222 HW2
 subtitle: Linear regression
-author: Your Name Here
+author: Courtney Lorey
 ---
 
 ```{r}
