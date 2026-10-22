@@ -1,0 +1,545 @@
+---
+title: EDS 222 HW2
+subtitle: Linear regression
+author: Your Name Here
+---
+
+```{r}
+#| label: setup
+#| message: false
+
+library(tidyverse)
+library(geosphere)
+set.seed(222)
+theme_set(theme_bw())
+```
+
+## 0. Prepare the data
+
+Problems 1 and 2 use the Exide soil core data and property covariates found in `/courses/EDS222/data`. The code below is provided for you. Read through it and make sure you understand what each step does, then run it.
+
+It creates a data frame called `properties` with **one row per property** and the following columns:
+
+| Column | Description |
+|---|---|
+| `property_id` | Unique property identifier |
+| `area` | Sampling area (`"ENA"`, `"ESA"`, or `"SS"`), taken from the first characters of `property_id` |
+| `pb_ppm` | Average soil lead concentration across all the property's soil cores (ppm) |
+| `dist_exide_km` | Distance from the former Exide facility (km) |
+| `year_built` | Year the home was built |
+| `home_age` | Age of the home in 2026 (years) |
+| `dist_to_freeway_m` | Distance to the nearest freeway (m) |
+| `dist_freeway_km` | Distance to the nearest freeway (km) |
+
+```{r}
+#| label: prepare-data
+#| message: false
+
+data_dir <- "/courses/EDS222/data"
+
+# Approximate location of the former Exide facility (2700 S Indiana St, Vernon)
+exide_lon <- -118.1923
+exide_lat <- 34.0058
+
+# Load soil cores, drop extreme outliers, and calculate distance to Exide.
+# distGeo() returns meters, so divide by 1000 to get km.
+soil_cores <- read_csv(file.path(data_dir, "exide-soil-cores.csv")) |>
+  filter(pb_ppm <= 5e3) |>
+  mutate(
+    area = str_remove(str_sub(property_id, 1, 3), "-"),
+    # distGeo() calculates the distance between geospatial points
+    dist_exide_km = distGeo(
+      cbind(longitude, latitude),
+      c(exide_lon, exide_lat)
+    ) / 1000
+  )
+
+property_covariates <- read_csv(file.path(data_dir, "exide-property-covariates.csv"))
+
+# Average the soil cores within each property, then join the covariates
+properties <- soil_cores |>
+  group_by(property_id, area) |>
+  summarize(
+    pb_ppm = mean(pb_ppm),
+    dist_exide_km = mean(dist_exide_km),
+    .groups = "drop"
+  ) |>
+  left_join(property_covariates, by = "property_id") |>
+  mutate(
+    home_age = 2026 - year_built,
+    dist_freeway_km = dist_to_freeway_m / 1000
+  )
+
+# Check: you should have 324 properties (79 ENA, 51 ESA, 194 SS)
+count(properties, area)
+```
+
+## 1. Simpson's paradox
+
+### Scenario
+
+For decades, cars burned leaded gasoline, and lead from tailpipe exhaust settled into nearby soil. A resident asks:
+
+> Is soil lead higher at properties closer to a freeway?
+
+You will investigate this question using properties in the **ENA** and **ESA** sampling areas only. As you'll see, the answer depends on whether you account for sampling area. This is an example of **Simpson's paradox**: a relationship between two variables that changes direction (or disappears) when a third variable is taken into account.
+
+### 1a. Subset the data
+
+Create a data frame called `ena_esa` containing only the properties in the ENA and ESA areas.
+
+```{r}
+#| label: subset-ena-esa
+
+ena_esa <- properties |>
+  filter(area %in% c(_____, _____))
+```
+
+### 1b. Visualize the raw data
+
+Make a scatter plot of soil lead and the distance to the nearest freeway. Color the points by which area they're in.
+
+
+```{r}
+#| label: plot-freeway
+
+ggplot(ena_esa, aes(_____)) +
+  geom_point() +
+  labs(
+    x = _____,
+    y = _____,
+    color = _____
+  )
+```
+
+Describe the pattern in your figure. How does distance to freeway differ between the two areas? How does soil lead differ between the two areas?
+
+_Your answer here._
+
+### 1c. Fit a model _without_ the categorical predictor
+
+Fit a simple linear regression with soil lead as the response and distance to freeway as the only predictor.
+
+```{r}
+#| label: fit-freeway-lm
+
+freeway_lm <- lm(_____)
+summary(freeway_lm)
+```
+
+Fill in the blanks to interpret the slope in a complete sentence, including units.
+
+> For every additional kilometer from a freeway, average soil lead is expected to _[increase/decrease]_ by ___ ppm.
+
+Fill in the blanks below to interpret the slope's p-value.
+
+$H_0$: the slope ____
+
+$H_A$: the slope ____
+
+With a p-value of ____, we ____ the null hypothesis and conclude there is evidence for ____.
+
+### 1d. Fit a model _with_ the categorical predictor
+
+Now add `area` as a second predictor.
+
+```{r}
+#| label: fit-freeway-area-lm
+
+freeway_area_lm <- lm(_____)
+summary(freeway_area_lm)
+```
+
+::: {.callout-tip}
+
+R converts `area` into a dummy variable automatically. The reference level is the one that comes first alphabetically ("ENA"), so the coefficient `areaESA` is the difference between ESA and ENA.
+
+:::
+
+Interpret the slope for `dist_freeway_km` _and_ the coefficient for `areaESA` in complete sentences. Remember that in a multiple regression, each coefficient describes the effect of that predictor _holding the other predictors constant_. In your interpretation, use the p-values to determine if the estimates are significantly different than 0.
+
+_Your answer here._
+
+### 1e. Compare the coefficient estimates
+
+Fill in the code below to create a table comparing the freeway distance slope from the two models.
+
+```{r}
+#| label: compare-slopes
+
+tibble(
+  model = c("Without area", "With area"),
+  slope = c(
+    coef(freeway_lm)["dist_freeway_km"],
+    coef(_____)["_____"]
+  ),
+  std_error = c(
+    summary(freeway_lm)$coefficients["dist_freeway_km", "Std. Error"],
+    summary(_____)$coefficients["_____", "Std. Error"]
+  )
+)
+```
+
+### 1f. Visualize both models
+
+The code below adds the fitted lines from both models to your scatter plot. The single black line comes from `freeway_lm`. The two colored lines come from `freeway_area_lm`. Fill in the blanks to calculate the intercepts for each area.
+
+::: {.callout-tip}
+
+In `freeway_area_lm`, both areas share the same slope. Only the intercept differs. The intercept for ENA is $\beta_0$. The intercept for ESA is $\beta_0 + \beta_2$.
+
+:::
+
+```{r}
+#| label: plot-freeway-models
+
+betas_without <- coef(freeway_lm)
+betas_with <- coef(freeway_area_lm)
+
+area_lines <- tibble(
+  area = c("ENA", "ESA"),
+  intercept = c(
+    betas_with["(Intercept)"],
+    _____
+  ),
+  slope = betas_with["dist_freeway_km"]
+)
+
+ggplot(ena_esa, aes(x = _____, y = _____, color = _____)) +
+  geom_point(alpha = 0.5) +
+  # Model without area: one line for all properties
+  geom_abline(
+    intercept = _____,
+    slope = _____,
+    linewidth = 1
+  ) +
+  # Model with area: one line per area
+  geom_abline(
+    aes(intercept = intercept, slope = slope, color = area),
+    data = area_lines,
+    linewidth = 1
+  ) +
+  labs(
+    x = "Distance to freeway (km)",
+    y = "Average soil Pb (ppm)",
+    color = "Sampling area"
+  )
+```
+
+### 1g. Interpret
+
+Answer the following questions in 2-3 sentences each.
+
+1. How did the estimated effect of freeway distance change when you added `area` to the model? Consider the sign, the magnitude, _and_ the standard error.
+2. Using your figure from 1b, explain _why_ the estimate changed. What is the relationship between `area` and `dist_freeway_km`?
+3. Based on these data, what would you tell the resident who asked whether soil lead is higher near freeways? What other variables might differ between ENA and ESA that could explain the difference in soil lead?
+
+_Your answers here._
+
+## 2. Fit and interpret an interactive model
+
+### Scenario
+
+Exide emitted lead into the air for decades, and that lead settled into the soil of surrounding neighborhoods. You might expect soil lead to decline with distance from the facility. However, the three sampling areas lie in different directions from the facility and have different street layouts and land uses. Airborne emissions are carried by prevailing winds, so the _rate_ at which soil lead declines with distance may not be the same in every area.
+
+Older homes are also more likely to have been painted with lead-based paint, which is an important source of soil lead independent of Exide. To isolate the effect of distance from Exide, you'll need to account for home age.
+
+Your question is:
+
+> Does the relationship between soil lead and distance from Exide differ among sampling areas, after accounting for home age?
+
+Answering this question requires an **interaction** between distance from Exide and sampling area. An additive model (no interaction) forces every area to have the same slope, so it _can't_ tell you whether the slopes differ.
+
+### 2a. Visualize the raw data
+
+Make a scatter plot of soil lead against distance from Exide, colored by area.
+
+```{r}
+#| label: plot-exide
+
+ggplot(properties, aes(x = _____, y = _____, color = _____)) +
+  geom_point(alpha = 0.5) +
+  labs(
+    x = "Distance from Exide (km)",
+    y = "Average soil Pb (ppm)",
+    color = "Sampling area"
+  )
+```
+
+Now make a scatter plot of soil lead against home age. You don't need to color by area.
+
+```{r}
+#| label: plot-age
+#| warning: false
+
+ggplot(properties, aes(x = _____, y = _____)) +
+  geom_point(alpha = 0.5) +
+  labs(
+    x = "Home age (years)",
+    y = "Average soil Pb (ppm)"
+  )
+```
+
+Describe what you see in both figures. What's the relationship between soil lead and distance from Exide, and does it vary by area? Does soil lead appear to be related to home age?
+
+_Your answer here._
+
+### 2b. Write the model
+
+The model you'll fit has two continuous predictors (`dist_exide_km` and `home_age`), one categorical predictor with three levels (`area`), and an interaction between `dist_exide_km` and `area`. Because `area` has three levels, it needs **two** dummy variables. ENA is the reference level.
+
+- $\text{ESA} = 1$ if the property is in ESA, 0 otherwise
+- $\text{SS} = 1$ if the property is in SS, 0 otherwise
+
+Here's the model equation.
+
+$$
+\begin{aligned}
+\text{Pb} = \beta_0 &+ \beta_1 \text{dist} + \beta_2 \text{ESA} + \beta_3 \text{SS} + \beta_4 \text{age} \\
+&+ \beta_5 \text{dist} \times \text{ESA} + \beta_6 \text{dist} \times \text{SS} + \varepsilon
+\end{aligned}
+$$
+
+Now use your equation to fill in the table. Each cell should be written in terms of $\beta$s. The first row is done for you.
+
+::: {.callout-tip}
+
+Plug in the values of the dummy variables for each area, then collect the terms that are multiplied by $\text{dist}$ (those make up the slope) and the terms that aren't (those make up the intercept). Hold age at zero for the intercept.
+
+:::
+
+| Area | Intercept | Slope with distance from Exide |
+|---|---|---|
+| ENA | $\beta_0$ | $\beta_1$ |
+| ESA | | |
+| SS | | |
+
+### 2c. Fit the models
+
+Fit two models. First, an _additive_ model without an interaction. Second, the _interactive_ model you wrote in 2b.
+
+::: {.callout-tip}
+
+In an R formula, `a * b` is shorthand for `a + b + a:b`. The `:` term is the interaction.
+
+:::
+
+```{r}
+#| label: fit-exide-models
+
+additive_lm <- lm(pb_ppm ~ _____ + _____ + _____, data = properties)
+summary(additive_lm)
+
+exide_lm <- lm(pb_ppm ~ _____ * _____ + _____, data = properties)
+summary(exide_lm)
+```
+
+Match each coefficient in the `exide_lm` summary to a $\beta$ in your equation from 2b. For example, `(Intercept)` is $\beta_0$.
+
+_Your answer here._
+
+### 2d. Calculate the slopes for each area
+
+Use the table from 2b to calculate the slope of soil lead with distance from Exide in each area.
+
+```{r}
+#| label: area-slopes
+
+betas <- coef(exide_lm)
+
+slope_ena <- betas["dist_exide_km"]
+slope_esa <- _____
+slope_ss <- _____
+
+tibble(
+  area = c("ENA", "ESA", "SS"),
+  slope = c(slope_ena, slope_esa, slope_ss)
+)
+```
+
+### 2e. Interpret
+
+Answer the following questions in 2-3 sentences each.
+
+1. Interpret the slope of soil lead with distance from Exide in each area (from 2d), including units.
+2. Interpret the coefficient for `home_age`, including units.
+3. Look at the `dist_exide_km` coefficient in `additive_lm`. What would you have concluded about the effect of distance from Exide if you had only fit the additive model? Why was the interaction necessary to answer the question?
+4. Which interaction coefficient(s) are statistically significant at the 0.05 level? What does that mean in the context of the scenario?
+
+_Your answers here._
+
+## 3. Simulate data for an interactive model
+
+### Scenario
+
+Each property in the Exide data has soil cores collected from two locations: the **drip line** (`DL`, the soil directly under the roof edge) and the **yard** (`YD`). These locations get lead from different sources.
+
+- Yard soil receives lead mostly from **airborne deposition**, so you'd expect yard soil lead to decline steeply with distance from Exide.
+- Drip line soil also receives lead from **paint** that flakes off the house and washes off the roof. Paint lead doesn't depend on distance from Exide, so you'd expect drip line soil to have higher lead overall and to decline _less_ steeply with distance.
+
+In this problem, you'll simulate data that matches this scenario, fit an interactive model to it, and check how well the model recovers the parameters you used.
+
+The model is:
+
+$$
+\text{Pb} = \beta_0 + \beta_1 \times \text{dist} + \beta_2 \times \text{YD} + \beta_3 \times \text{dist} \times \text{YD} + \varepsilon
+$$
+
+$$
+\varepsilon \sim N(0, \sigma)
+$$
+
+where $\text{YD} = 1$ for yard samples and 0 for drip line samples. Drip line is the reference level, which matches how R will code it ("DL" comes before "YD" alphabetically).
+
+### 3a. Choose your parameters
+
+Before you write code, decide what each parameter means in this scenario and what sign it should have. Fill in the table.
+
+
+::: {.callout-tip}
+
+In lab, you sketched a figure showing what the simulated data should look like before picking your coefficients. Try doing the same here!
+
+:::
+
+
+| Parameter | Meaning in this scenario | Sign (+ or -) | Your value |
+|---|---|---|---|
+| $\beta_0$ | Expected drip line soil lead at the facility (dist = 0) | | |
+| $\beta_1$ | | | |
+| $\beta_2$ | | | |
+| $\beta_3$ | | | |
+| $\sigma$ | | n/a | |
+
+::: {.callout-tip}
+
+Keep your values realistic. In the real data, distances from Exide range from about 1 to 3 km and average soil lead ranges from about 50 to 1,000 ppm. Make sure your expected soil lead stays positive across the range of distances you simulate.
+
+Here's a way to check your choices. The slope for drip line samples is $\beta_1$, and the slope for yard samples is $\beta_1 + \beta_3$. If yard soil declines _more_ steeply than drip line soil, what does that imply about the sign of $\beta_3$?
+
+:::
+
+```{r}
+#| label: sim-params
+
+beta_0 <- _____
+beta_1 <- _____
+beta_2 <- _____
+beta_3 <- _____
+sigma <- _____ 
+```
+
+### 3b. Simulate the predictors
+
+Simulate `N = 200` soil cores. Distance from Exide should be continuous, so use `runif()`. Sample location is categorical, so use `sample()`. Then create the dummy variable for yard samples.
+
+```{r}
+#| label: sim-predictors
+
+N <- 200
+dist_exide_km <- runif(N, min = _____, max = _____)
+location_code <- sample(c("DL", "YD"), size = N, replace = _____)
+yard <- ifelse(location_code == _____, 1, 0)
+```
+
+### 3c. Simulate the response
+
+First, calculate the expected value of soil lead using your model equation. Then add normally-distributed residuals with `rnorm()`.
+
+::: {.callout-tip}
+
+The interaction term is just the product of the two predictors: `dist_exide_km * yard`.
+
+:::
+
+```{r}
+#| label: sim-response
+
+pb_expected <- _____
+pb_ppm <- rnorm(n = _____, mean = _____, sd = _____)
+
+simulated_cores <- tibble(
+  dist_exide_km,
+  location_code,
+  pb_ppm
+)
+```
+
+### 3d. Fit the model
+
+Fit an interactive model to your simulated data. Then compare the estimated coefficients to the parameters you chose.
+
+```{r}
+#| label: sim-fit
+
+sim_lm <- lm(_____ ~ _____ * _____, data = simulated_cores)
+summary(sim_lm)
+
+tibble(
+  parameter = c("beta_0", "beta_1", "beta_2", "beta_3"),
+  true = c(beta_0, beta_1, beta_2, beta_3),
+  estimated = coef(_____)
+)
+```
+
+### 3e. Visualize the simulation
+
+Make a figure with three layers:
+
+1. The simulated data as points
+2. **Dashed** lines for the _true_ relationships (from the $\beta$s you chose)
+3. **Solid** lines for the _estimated_ relationships (from `sim_lm`)
+
+First, build a data frame with the intercept and slope of each line. There are four lines: true and estimated, for drip line and yard. Use your table from 3a (and the tip there) to fill in the blanks.
+
+```{r}
+#| label: sim-lines
+
+betas_hat <- coef(sim_lm)
+
+model_lines <- tibble(
+  source = c("True", "True", "Estimated", "Estimated"),
+  location_code = c("DL", "YD", "DL", "YD"),
+  intercept = c(
+    beta_0,
+    _____,
+    betas_hat[1],
+    _____
+  ),
+  slope = c(
+    beta_1,
+    _____,
+    betas_hat[2],
+    _____
+  )
+)
+model_lines
+```
+
+::: {.callout-tip}
+
+`betas_hat` is a vector in the same order as the `sim_lm` summary: `betas_hat[1]` is the intercept, `betas_hat[2]` is the distance slope, `betas_hat[3]` is the yard intercept difference, and `betas_hat[4]` is the interaction.
+
+:::
+
+Now make the figure. `geom_abline()` draws a line from an intercept and slope. Map `color` to sample location and `linetype` to whether the line is true or estimated.
+
+```{r}
+#| label: sim-plot
+
+ggplot(simulated_cores, aes(x = _____, y = _____, color = _____)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope, color = _____, linetype = _____),
+    data = _____,
+    linewidth = 1
+  ) +
+  scale_color_manual(values = c(DL = "cornflowerblue", YD = "firebrick")) +
+  scale_linetype_manual(values = c(True = "dashed", Estimated = "solid")) +
+  labs(
+    x = "Distance from Exide (km)",
+    y = "Soil Pb (ppm)",
+    color = "Sample location",
+    linetype = "Line"
+  )
+```
