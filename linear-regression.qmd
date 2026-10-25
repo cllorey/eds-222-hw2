@@ -92,7 +92,7 @@ Create a data frame called `ena_esa` containing only the properties in the ENA a
 #| label: subset-ena-esa
 
 ena_esa <- properties |>
-  filter(area %in% c(_____, _____))
+  filter(area %in% c("ENA", "ESA"))
 ```
 
 ### 1b. Visualize the raw data
@@ -103,18 +103,18 @@ Make a scatter plot of soil lead and the distance to the nearest freeway. Color 
 ```{r}
 #| label: plot-freeway
 
-ggplot(ena_esa, aes(_____)) +
+ggplot(ena_esa, aes(x = dist_freeway_km, y = pb_ppm, color = area)) +
   geom_point() +
   labs(
-    x = _____,
-    y = _____,
-    color = _____
+    x = 'Distance to freeway (km)',
+    y = 'Soil lead concentration (ppm)',
+    color = 'Area'
   )
 ```
 
 Describe the pattern in your figure. How does distance to freeway differ between the two areas? How does soil lead differ between the two areas?
 
-_Your answer here._
+Areas north of the Exide facility (ENA) are all under 1km from a freeway, whereas areas south of the Exide faciltiy (ESA) are further from a freeway (ranging from .5 km to 2.5+ km away). Soil lead concentratoins in 
 
 ### 1c. Fit a model _without_ the categorical predictor
 
@@ -123,21 +123,21 @@ Fit a simple linear regression with soil lead as the response and distance to fr
 ```{r}
 #| label: fit-freeway-lm
 
-freeway_lm <- lm(_____)
+freeway_lm <- lm(pb_ppm ~ dist_freeway_km, data = ena_esa)
 summary(freeway_lm)
 ```
 
 Fill in the blanks to interpret the slope in a complete sentence, including units.
 
-> For every additional kilometer from a freeway, average soil lead is expected to _[increase/decrease]_ by ___ ppm.
+> For every additional kilometer from a freeway, average soil lead is expected to decrease by 36.87 ppm.
 
 Fill in the blanks below to interpret the slope's p-value.
 
-$H_0$: the slope ____
+$H_0$: the slope of the line does not change as distance to freeway increases, meaning there is not a relationship between soil lead concentration and distance to the freeway.
 
-$H_A$: the slope ____
+$H_A$: the slope of the line changes as distance to freeway increases, meaning there is ia relationship between soil lead concentration and distance to the freeway.
 
-With a p-value of ____, we ____ the null hypothesis and conclude there is evidence for ____.
+With a p-value of 0.02, we reject the null hypothesis and conclude there is evidence for a relationship between soil lead concentration and distance to the freeway.
 
 ### 1d. Fit a model _with_ the categorical predictor
 
@@ -146,7 +146,7 @@ Now add `area` as a second predictor.
 ```{r}
 #| label: fit-freeway-area-lm
 
-freeway_area_lm <- lm(_____)
+freeway_area_lm <- lm(pb_ppm ~ dist_freeway_km + area, data = ena_esa)
 summary(freeway_area_lm)
 ```
 
@@ -171,11 +171,11 @@ tibble(
   model = c("Without area", "With area"),
   slope = c(
     coef(freeway_lm)["dist_freeway_km"],
-    coef(_____)["_____"]
+    coef(freeway_area_lm)["areaESA"]
   ),
   std_error = c(
     summary(freeway_lm)$coefficients["dist_freeway_km", "Std. Error"],
-    summary(_____)$coefficients["_____", "Std. Error"]
+    summary(freeway_area_lm)$coefficients["areaESA", "Std. Error"]
   )
 )
 ```
@@ -200,17 +200,17 @@ area_lines <- tibble(
   area = c("ENA", "ESA"),
   intercept = c(
     betas_with["(Intercept)"],
-    _____
+    betas_with["(Intercept)"] + betas_with["areaESA"]
   ),
   slope = betas_with["dist_freeway_km"]
 )
 
-ggplot(ena_esa, aes(x = _____, y = _____, color = _____)) +
+ggplot(ena_esa, aes(x = dist_freeway_km, y = pb_ppm, color = area)) +
   geom_point(alpha = 0.5) +
   # Model without area: one line for all properties
   geom_abline(
-    intercept = _____,
-    slope = _____,
+    intercept = betas_without["(Intercept)"],
+    slope = betas_without["dist_freeway_km"],
     linewidth = 1
   ) +
   # Model with area: one line per area
@@ -234,7 +234,7 @@ Answer the following questions in 2-3 sentences each.
 2. Using your figure from 1b, explain _why_ the estimate changed. What is the relationship between `area` and `dist_freeway_km`?
 3. Based on these data, what would you tell the resident who asked whether soil lead is higher near freeways? What other variables might differ between ENA and ESA that could explain the difference in soil lead?
 
-_Your answers here._
+_Your answers here._ 
 
 ## 2. Fit and interpret an interactive model
 
@@ -257,7 +257,7 @@ Make a scatter plot of soil lead against distance from Exide, colored by area.
 ```{r}
 #| label: plot-exide
 
-ggplot(properties, aes(x = _____, y = _____, color = _____)) +
+ggplot(properties, aes(x = dist_exide_km, y = pb_ppm, color = area)) +
   geom_point(alpha = 0.5) +
   labs(
     x = "Distance from Exide (km)",
@@ -272,7 +272,7 @@ Now make a scatter plot of soil lead against home age. You don't need to color b
 #| label: plot-age
 #| warning: false
 
-ggplot(properties, aes(x = _____, y = _____)) +
+ggplot(properties, aes(x = home_age, y = pb_ppm)) +
   geom_point(alpha = 0.5) +
   labs(
     x = "Home age (years)",
