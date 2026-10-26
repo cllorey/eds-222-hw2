@@ -133,11 +133,11 @@ Fill in the blanks to interpret the slope in a complete sentence, including unit
 
 Fill in the blanks below to interpret the slope's p-value.
 
-$H_0$: the slope of the line does not change as distance to freeway increases, meaning there is not a relationship between soil lead concentration and distance to the freeway.
+$H_0$: the slope does not change as distance to freeway increases, meaning there is not a relationship between soil lead concentration and distance to the freeway. Soil lead concentration does not change with distance to freeway. 
 
-$H_A$: the slope of the line changes as distance to freeway increases, meaning there is ia relationship between soil lead concentration and distance to the freeway.
+$H_A$: the slope decreases as distance to freeway increases, meaning there is a relationship between soil lead concentration and distance to the freeway. Soil lead concentration decreases with distance to freeway.
 
-With a p-value of 0.02, we reject the null hypothesis and conclude there is evidence for a relationship between soil lead concentration and distance to the freeway.
+With a p-value of 0.02, we reject the null hypothesis and conclude there is evidence for a relationship between soil lead concentration and distance to freeway.
 
 ### 1d. Fit a model _with_ the categorical predictor
 
