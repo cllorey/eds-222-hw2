@@ -114,7 +114,7 @@ ggplot(ena_esa, aes(x = dist_freeway_km, y = pb_ppm, color = area)) +
 
 Describe the pattern in your figure. How does distance to freeway differ between the two areas? How does soil lead differ between the two areas?
 
-Areas north of the Exide facility (ENA) are all under 1km from a freeway, whereas areas south of the Exide faciltiy (ESA) are further from a freeway (ranging from .5 km to 2.5+ km away). Soil lead concentratoins in 
+Areas north of the Exide facility (ENA) are all under 1km from a freeway, whereas areas south of the Exide faciltiy (ESA) are further from a freeway (ranging from .5 km to 2.5+ km away). Soil lead concentrations in 
 
 ### 1c. Fit a model _without_ the categorical predictor
 
@@ -133,11 +133,11 @@ Fill in the blanks to interpret the slope in a complete sentence, including unit
 
 Fill in the blanks below to interpret the slope's p-value.
 
-$H_0$: the slope does not change as distance to freeway increases, meaning there is not a relationship between soil lead concentration and distance to the freeway. Soil lead concentration does not change with distance to freeway. 
+$H_0$: the slope is zero. There is not a relationship between soil lead concentration and distance to freeway (soil lead concentration does not significantly change with distance to freeway).
 
-$H_A$: the slope decreases as distance to freeway increases, meaning there is a relationship between soil lead concentration and distance to the freeway. Soil lead concentration decreases with distance to freeway.
+$H_A$: the slope is not zero. There is a relationship between soil lead concentration and distance to freeway (soil lead concentration significantly changes with distance to freeway).
 
-With a p-value of 0.02, we reject the null hypothesis and conclude there is evidence for a relationship between soil lead concentration and distance to freeway.
+With a p-value of 0.02, we reject the null hypothesis and conclude there is evidence for a relationship between soil lead concentration and distance to freeway, and that soil lead concentration significantly changes with distance to freeway. 
 
 ### 1d. Fit a model _with_ the categorical predictor
 
@@ -158,7 +158,7 @@ R converts `area` into a dummy variable automatically. The reference level is th
 
 Interpret the slope for `dist_freeway_km` _and_ the coefficient for `areaESA` in complete sentences. Remember that in a multiple regression, each coefficient describes the effect of that predictor _holding the other predictors constant_. In your interpretation, use the p-values to determine if the estimates are significantly different than 0.
 
-_Your answer here._
+When adding `area` to our model, the slope for `dist_freeway_km` becomes positive 12.2, meaning that with each kilometer from the freeway, soil lead concentration increases by 12.2 (though with a p-value of .712, this is not statistically significant). The areaESA coefficient, -88.18, serves as our beta_2 value, which implies that the intercept of the ESA area is -88.18 less than the intercept of the ENA area (278.88).
 
 ### 1e. Compare the coefficient estimates
 
@@ -171,11 +171,11 @@ tibble(
   model = c("Without area", "With area"),
   slope = c(
     coef(freeway_lm)["dist_freeway_km"],
-    coef(freeway_area_lm)["areaESA"]
+    coef(freeway_area_lm)["dist_freeway_km"]
   ),
   std_error = c(
     summary(freeway_lm)$coefficients["dist_freeway_km", "Std. Error"],
-    summary(freeway_area_lm)$coefficients["areaESA", "Std. Error"]
+    summary(freeway_area_lm)$coefficients["dist_freeway_km", "Std. Error"]
   )
 )
 ```
@@ -231,10 +231,16 @@ ggplot(ena_esa, aes(x = dist_freeway_km, y = pb_ppm, color = area)) +
 Answer the following questions in 2-3 sentences each.
 
 1. How did the estimated effect of freeway distance change when you added `area` to the model? Consider the sign, the magnitude, _and_ the standard error.
+
+The estimated effect of freeway distance was very different once `area` was added to the model. Without `area`, it appeared that soil lead concentration decreased by 36.9 (with a standard error of 15.5) with each kilometer from the freeway. Once `area` was taken into account, the slope became positive for both ENA and ESA areas, indicating that soil lead concentration actually increased by 12.2 (with a standard error of 33.1) with each kilometer from the freeway. It is worth noting that the standard error for the slope of the model with `area` is more than double the standard area for the slope of the model without area. 
+
 2. Using your figure from 1b, explain _why_ the estimate changed. What is the relationship between `area` and `dist_freeway_km`?
+
+The estimate changed because `area` was not initially a included as a second predictor. The ENA area is closer to the freeway than the ESA area. 
+
 3. Based on these data, what would you tell the resident who asked whether soil lead is higher near freeways? What other variables might differ between ENA and ESA that could explain the difference in soil lead?
 
-_Your answers here._ 
+I would tell the resident that they also need to take into account whether they are north or south of the Exide facility, as proximity to the facility may also play a role (though the results of our modeling are not statistically significant). Areas north of the facility tend to be closer to the freeway and have higher average lead concentrations compared to areas south of the facility (which tend to be further from the freeway and have lower average lead concentrations). Another variable that may differ between ENA and ESA is wind direction (which direction the wind may be blowing pollutants from the Exide facility) as well as distance to the Exide facility itself. 
 
 ## 2. Fit and interpret an interactive model
 
@@ -282,7 +288,7 @@ ggplot(properties, aes(x = home_age, y = pb_ppm)) +
 
 Describe what you see in both figures. What's the relationship between soil lead and distance from Exide, and does it vary by area? Does soil lead appear to be related to home age?
 
-_Your answer here._
+SS is closest to the Exide facility. There is not an immediately apparent relationship between soil lead and distance from Exide, except maybe for SS (where pb_ppm looks like it might be a little higher the closer it is to the facility). Soil lead concentration appears to be positively correlated with home age. 
 
 ### 2b. Write the model
 
@@ -311,8 +317,8 @@ Plug in the values of the dummy variables for each area, then collect the terms 
 | Area | Intercept | Slope with distance from Exide |
 |---|---|---|
 | ENA | $\beta_0$ | $\beta_1$ |
-| ESA | | |
-| SS | | |
+| ESA | beta_0 + beta_2 + beta_4*age | beta_1 + beta_5 |
+| SS | beta_0 + beta_3 + beta_4*age | beta_1 + beta_6 |
 
 ### 2c. Fit the models
 
@@ -327,16 +333,24 @@ In an R formula, `a * b` is shorthand for `a + b + a:b`. The `:` term is the int
 ```{r}
 #| label: fit-exide-models
 
-additive_lm <- lm(pb_ppm ~ _____ + _____ + _____, data = properties)
+additive_lm <- lm(pb_ppm ~ dist_exide_km + home_age + area, data = properties)
 summary(additive_lm)
 
-exide_lm <- lm(pb_ppm ~ _____ * _____ + _____, data = properties)
+exide_lm <- lm(pb_ppm ~ dist_exide_km * area + home_age, data = properties)
 summary(exide_lm)
 ```
 
 Match each coefficient in the `exide_lm` summary to a $\beta$ in your equation from 2b. For example, `(Intercept)` is $\beta_0$.
 
-_Your answer here._
+                                  Estimate Std. Error t value Pr(>|t|)    
+beta_0 |  (Intercept)            101.7239    74.2762   1.370  0.17183    
+beta_1 |  dist_exide_km           -5.4869    33.1057  -0.166  0.86847    
+beta_2 |  areaESA                -91.3760    96.9073  -0.943  0.34646    
+beta_3 |  areaSS                 263.4618   119.6127   2.203  0.02836 *  
+beta_4 |  home_age                 1.9109     0.4027   4.745  3.2e-06 ***
+beta_5 |  dist_exide_km:areaESA   20.3306    48.2140   0.422  0.67356    
+beta_6 |  dist_exide_km:areaSS  -211.9339    77.3931  -2.738  0.00653 ** 
+
 
 ### 2d. Calculate the slopes for each area
 
@@ -348,8 +362,8 @@ Use the table from 2b to calculate the slope of soil lead with distance from Exi
 betas <- coef(exide_lm)
 
 slope_ena <- betas["dist_exide_km"]
-slope_esa <- _____
-slope_ss <- _____
+slope_esa <- betas["dist_exide_km"] + betas["dist_exide_km:areaESA"]
+slope_ss <- betas["dist_exide_km"] + betas["dist_exide_km:areaSS"]
 
 tibble(
   area = c("ENA", "ESA", "SS"),
@@ -362,11 +376,27 @@ tibble(
 Answer the following questions in 2-3 sentences each.
 
 1. Interpret the slope of soil lead with distance from Exide in each area (from 2d), including units.
-2. Interpret the coefficient for `home_age`, including units.
-3. Look at the `dist_exide_km` coefficient in `additive_lm`. What would you have concluded about the effect of distance from Exide if you had only fit the additive model? Why was the interaction necessary to answer the question?
-4. Which interaction coefficient(s) are statistically significant at the 0.05 level? What does that mean in the context of the scenario?
 
-_Your answers here._
+The slope of ENA is -5.49, meaning that with each km from Exide, soil lead concentrations decrease by 5.49 ppm.
+The slope of ESA is 14.8, meaning that with each km from Exide, soil lead concentrations increase by 14.8ppm.
+The slope of SS is -217, meaning that with each km from Exide, soil lead concentrations decrease by 217 ppm.
+
+2. Interpret the coefficient for `home_age`, including units.
+
+The coefficient for `home_age` is 1.91, for each additional year of home age, the intercept increases by 1.91 ppm. 
+
+3. Look at the `dist_exide_km` coefficient in `additive_lm`. What would you have concluded about the effect of distance from Exide if you had only fit the additive model? Why was the interaction necessary to answer the question?
+
+Additive: -19.44 
+Interactive: -5.5 
+
+If we had only fit the additive model, we would have assumed a strong negative slope as distance increased - that with each km from Exide, soil lead concentration would decrease by 19.44. This overestimates the effect of distance to Exide on soil lead concentration, which is why the interaction is necessary: the slope is still negative for the interactive model, but when area is added as an interaction, it is less steep (-5.5 instead of -19.44).
+
+4. Which interaction coefficient(s) are statistically significant at the 0.05 level? What does that mean in the context of the scenario?
+Only the dist_exide_km:areaSS interaction coefficient is statistically significant at the 0.05 level. In the context of this scenario, it means that the interaction between Area SS and distance from Exide has a statistically significant impact on soil lead concentration.
+
+OR does it mean that the relationship between areaSS and distance from Exide is statistically significant? 
+
 
 ## 3. Simulate data for an interactive model
 
