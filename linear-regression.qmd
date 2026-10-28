@@ -435,11 +435,11 @@ In lab, you sketched a figure showing what the simulated data should look like b
 
 | Parameter | Meaning in this scenario | Sign (+ or -) | Your value |
 |---|---|---|---|
-| $\beta_0$ | Expected drip line soil lead at the facility (dist = 0) | | |
-| $\beta_1$ | | | |
-| $\beta_2$ | | | |
-| $\beta_3$ | | | |
-| $\sigma$ | | n/a | |
+| $\beta_0$ | Expected drip line soil lead at the facility (dist = 0) | + | 250 |
+| $\beta_1$ | Expected change in soil lead as you get further from Exide | - | 30 |
+| $\beta_2$ | Difference in soil lead between the drip line and yard | - | 50 |
+| $\beta_3$ | Expected change in soil lead due to the interaction between distance from Exide and location in the yard | - | 5 |
+| $\sigma$ | Spread of the data from the line of best fit (residuals) | n/a | 5 |
 
 ::: {.callout-tip}
 
@@ -452,11 +452,11 @@ Here's a way to check your choices. The slope for drip line samples is $\beta_1$
 ```{r}
 #| label: sim-params
 
-beta_0 <- _____
-beta_1 <- _____
-beta_2 <- _____
-beta_3 <- _____
-sigma <- _____ 
+beta_0 <- 250
+beta_1 <- -30
+beta_2 <- -50
+beta_3 <- -5
+sigma <- 5 
 ```
 
 ### 3b. Simulate the predictors
@@ -467,9 +467,9 @@ Simulate `N = 200` soil cores. Distance from Exide should be continuous, so use 
 #| label: sim-predictors
 
 N <- 200
-dist_exide_km <- runif(N, min = _____, max = _____)
-location_code <- sample(c("DL", "YD"), size = N, replace = _____)
-yard <- ifelse(location_code == _____, 1, 0)
+dist_exide_km <- runif(N, min = 0, max = 3)
+location_code <- sample(c("DL", "YD"), size = N, replace = TRUE)
+yard <- ifelse(location_code == "YD", 1, 0)
 ```
 
 ### 3c. Simulate the response
@@ -485,8 +485,8 @@ The interaction term is just the product of the two predictors: `dist_exide_km *
 ```{r}
 #| label: sim-response
 
-pb_expected <- _____
-pb_ppm <- rnorm(n = _____, mean = _____, sd = _____)
+pb_expected <- beta_0 + (beta_1*dist_exide_km) + (beta_2*yard) + (beta_3*dist_exide_km*yard)
+pb_ppm <- rnorm(n = N, mean = pb_expected, sd = sigma)
 
 simulated_cores <- tibble(
   dist_exide_km,
@@ -502,13 +502,13 @@ Fit an interactive model to your simulated data. Then compare the estimated coef
 ```{r}
 #| label: sim-fit
 
-sim_lm <- lm(_____ ~ _____ * _____, data = simulated_cores)
+sim_lm <- lm(pb_ppm ~ dist_exide_km * location_code, data = simulated_cores)
 summary(sim_lm)
 
 tibble(
   parameter = c("beta_0", "beta_1", "beta_2", "beta_3"),
   true = c(beta_0, beta_1, beta_2, beta_3),
-  estimated = coef(_____)
+  estimated = coef(sim_lm)
 )
 ```
 
@@ -532,15 +532,15 @@ model_lines <- tibble(
   location_code = c("DL", "YD", "DL", "YD"),
   intercept = c(
     beta_0,
-    _____,
+    beta_0 + beta_2,
     betas_hat[1],
-    _____
+    betas_hat[1] + betas_hat[3]
   ),
   slope = c(
     beta_1,
-    _____,
+    beta_1 + beta_3,
     betas_hat[2],
-    _____
+    betas_hat[2] + betas_hat[4]
   )
 )
 model_lines
@@ -557,11 +557,11 @@ Now make the figure. `geom_abline()` draws a line from an intercept and slope. M
 ```{r}
 #| label: sim-plot
 
-ggplot(simulated_cores, aes(x = _____, y = _____, color = _____)) +
+ggplot(simulated_cores, aes(x = dist_exide_km, y = pb_ppm, color = location_code)) +
   geom_point(alpha = 0.5) +
   geom_abline(
-    aes(intercept = intercept, slope = slope, color = _____, linetype = _____),
-    data = _____,
+    aes(intercept = intercept, slope = slope, color = location_code, linetype = source),
+    data = model_lines,
     linewidth = 1
   ) +
   scale_color_manual(values = c(DL = "cornflowerblue", YD = "firebrick")) +
@@ -573,3 +573,5 @@ ggplot(simulated_cores, aes(x = _____, y = _____, color = _____)) +
     linetype = "Line"
   )
 ```
+
+The model is a great fit! Yay!
