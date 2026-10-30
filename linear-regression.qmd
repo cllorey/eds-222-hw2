@@ -51,10 +51,14 @@ soil_cores <- read_csv(file.path(data_dir, "exide-soil-cores.csv")) |>
     dist_exide_km = distGeo(
       cbind(longitude, latitude),
       c(exide_lon, exide_lat)
-    ) / 1000
+    ) /
+      1000
   )
 
-property_covariates <- read_csv(file.path(data_dir, "exide-property-covariates.csv"))
+property_covariates <- read_csv(file.path(
+  data_dir,
+  "exide-property-covariates.csv"
+))
 
 # Average the soil cores within each property, then join the covariates
 properties <- soil_cores |>
@@ -317,8 +321,8 @@ Plug in the values of the dummy variables for each area, then collect the terms 
 | Area | Intercept | Slope with distance from Exide |
 |---|---|---|
 | ENA | $\beta_0$ | $\beta_1$ |
-| ESA | beta_0 + beta_2 + beta_4*age | beta_1 + beta_5 |
-| SS | beta_0 + beta_3 + beta_4*age | beta_1 + beta_6 |
+| ESA | $\beta_0$ + $\beta_2$ | $\beta_1$ + $\beta_5$ |
+| SS | $\beta_0$ + $\beta_3$ | $\beta_1$ + $\beta_6$ |
 
 ### 2c. Fit the models
 
@@ -383,7 +387,7 @@ The slope of SS is -217, meaning that with each km from Exide, soil lead concent
 
 2. Interpret the coefficient for `home_age`, including units.
 
-The coefficient for `home_age` is 1.91, for each additional year of home age, the intercept increases by 1.91 ppm. 
+The coefficient for `home_age` is 1.91 ppm: for each additional year of home age, the intercept increases by 1.91 ppm. 
 
 3. Look at the `dist_exide_km` coefficient in `additive_lm`. What would you have concluded about the effect of distance from Exide if you had only fit the additive model? Why was the interaction necessary to answer the question?
 
@@ -394,9 +398,6 @@ If we had only fit the additive model, we would have assumed a strong negative s
 
 4. Which interaction coefficient(s) are statistically significant at the 0.05 level? What does that mean in the context of the scenario?
 Only the dist_exide_km:areaSS interaction coefficient is statistically significant at the 0.05 level. In the context of this scenario, it means that the interaction between Area SS and distance from Exide has a statistically significant impact on soil lead concentration.
-
-OR does it mean that the relationship between areaSS and distance from Exide is statistically significant? 
-
 
 ## 3. Simulate data for an interactive model
 
@@ -456,7 +457,7 @@ beta_0 <- 250
 beta_1 <- -30
 beta_2 <- -50
 beta_3 <- -5
-sigma <- 5 
+sigma <- 5
 ```
 
 ### 3b. Simulate the predictors
@@ -485,7 +486,10 @@ The interaction term is just the product of the two predictors: `dist_exide_km *
 ```{r}
 #| label: sim-response
 
-pb_expected <- beta_0 + (beta_1*dist_exide_km) + (beta_2*yard) + (beta_3*dist_exide_km*yard)
+pb_expected <- beta_0 +
+  (beta_1 * dist_exide_km) +
+  (beta_2 * yard) +
+  (beta_3 * dist_exide_km * yard)
 pb_ppm <- rnorm(n = N, mean = pb_expected, sd = sigma)
 
 simulated_cores <- tibble(
@@ -557,10 +561,18 @@ Now make the figure. `geom_abline()` draws a line from an intercept and slope. M
 ```{r}
 #| label: sim-plot
 
-ggplot(simulated_cores, aes(x = dist_exide_km, y = pb_ppm, color = location_code)) +
+ggplot(
+  simulated_cores,
+  aes(x = dist_exide_km, y = pb_ppm, color = location_code)
+) +
   geom_point(alpha = 0.5) +
   geom_abline(
-    aes(intercept = intercept, slope = slope, color = location_code, linetype = source),
+    aes(
+      intercept = intercept,
+      slope = slope,
+      color = location_code,
+      linetype = source
+    ),
     data = model_lines,
     linewidth = 1
   ) +
