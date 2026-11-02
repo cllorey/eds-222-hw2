@@ -4,6 +4,23 @@ subtitle: "Final Project Checkpoint #2"
 author: "Courtney Lorey"
 date: 2026-10-22
 ---
+## Note for Sloane:
+
+Hi Sloane, in trying to expand the scope of my HW1 EDA, I've had to do a lot more research before being ready to move forward with a well-thought out proposal. After talking to Max during office hours, I want to ask a more interesting question about fishing effort and biomass, ideally involving a couple other locations and/or species. I'm still trying to formulate the right question and find my data accordingly. What I'd love to do is to use Global Fishing Watch publicly tracked fishing effort (AIS) versus not publicly tracked fishing effort (SAR satellite detection), compare these rates in a couple different exclusive economic zones (EEZs), and try to see if there is a relationship between the proportion of publicly vs non-publicly tracked fishing effort and the sustainability of a fishery (eg, do countries with more public tracking have more sustainable fisheries?). Some questions I'm running into:
+
+- I'm not sure how to define/what data to use for "sustainability" in this analysis, as this will depend on where I look (Alaska vs. other parts of the US vs. other countries, where reporting and sustainability metrics may differ).
+- My other thought would be to just look at biomass as the response variable, but biomass alone isn't necessarily an indicator of fishery health - so should the question just be "do countries with more public tracking have higher relative biomass?" How do I make the biomass metric relative across different countries/spatial scales? 
+- I'm trying to determine how to account for lag time in the response of fish populations to fishing pressure in a given year (ex. should I look at biomass in 2018 if I am looking at fishing effort in 2017?) 
+- Given different life histories, lag time presumably changes for different species, so should I only look at one species across a series of places so as to simplify the analysis?
+- I also need to account for gear type - this is something I didn't do in my EDA. I assumed all fishing effort was for pollock, and going back I realized there were also plenty of other gear types that were likely targeting other species. This will require some research on what gear types are typically used for certain species, stating assumptions, and filtering the data accordingly. 
+
+All this is to say, I'm actively working on this and while I'm not at the point where I can answer all the questions from this week's rubric, I plan to dedicate more time to this project this upcoming week and would love your thoughts once I've built it out a little more. Any initial thoughts on this concept would also be welcomed!
+
+Two sources I'm currently working from: 
+Paolo, Fernando S., David Kroodsma, Jennifer Raynor, et al. “Satellite Mapping Reveals Extensive Industrial Activity at Sea.” Nature 625, no. 7993 (2024): 85–91. https://doi.org/10.1038/s41586-023-06825-8.
+Raynor, Jennifer, Sara Orofino, Christopher Costello, Gavin McDonald, Juan Mayorga, and Enric Sala. “Little-to-No Industrial Fishing Occurs in Fully and Highly Protected Marine Areas.” Science 389, no. 6758 (2025): 392–95. https://doi.org/10.1126/science.adt9009.
+
+
 
 ## 1. Your question and data
 
